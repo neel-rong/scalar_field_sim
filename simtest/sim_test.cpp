@@ -7,6 +7,7 @@
 
 void SimTest::Init()
 {
+	m_simulationTimeStep = m_simulationConfig->TargetTimeStep;
 	// Get or Create the Test Output Folder
 	std::filesystem::path exeDir = sim_fileOps::GetExecutableDirectory();
 
@@ -28,7 +29,7 @@ void SimTest::BeginTest()
 	const char* testString[2];
 	SimulationConfig::GetTestModeString(testString, 2);
 
-	int testModeI = static_cast<int>(m_simConfig->TestMode);
+	int testModeI = static_cast<int>(m_simulationConfig->TestMode);
 	std::string SubFolderName = "Test";
 
 	m_currentOutputFolderPath = sim_fileOps::CreateTimestampedOutputFolder(m_outputFolder, SubFolderName);
@@ -87,7 +88,7 @@ bool SimTest::PressureSolverTest()
 
 	for (SimulationConfig::PressureSolverEnum PSE : SimulationConfig::PressureSolverArray)
 	{
-		m_simConfig->PressureSolver = PSE;
+		m_simulationConfig->PressureSolver = PSE;
 		std::string solvername = SolverString[static_cast<int>(PSE)];
 
 		std::string pressurefilename = "PressureTest_Pressure_" + solvername;
@@ -97,12 +98,12 @@ bool SimTest::PressureSolverTest()
 
 		std::cout << "\nSolver Iteration for " << solvername << ": ";
 		GetInput(m_pressureSolveIt, [](int x) { return x > 0; }, "Invalid input. Please enter a positive integer.");
-		m_simConfig->SolverIterations = m_pressureSolveIt;
+		m_simulationConfig->SolverIterations = m_pressureSolveIt;
 
 		std::cout << "\nStarting " << solvername << " Solver Test...\n";
 
 		bool bthisSolverSucess = true;
-		m_simConfig->bResetPressureField = true;
+		m_simulationConfig->bResetPressureField = true;
 
 		if (bExportCSV)
 		{
@@ -142,12 +143,8 @@ bool SimTest::PressureSolverTest()
 		{
 			InitializeFields(Int2(TR, TR), 0.0f);
 
-			sim_ops::ApplySource(m_fields.VelocityField.UField(), 0.0f, 1.0f, false);
-			m_fields.VelocityField.SetBoundaryNormalComponentZero();
-			m_fields.VelocityField.UpdateGhostCellsNeumann();
-
 			std::string testStats = "\nResolution: " + std::to_string(TR) +
-				"\nSolverIterations: " + std::to_string(m_simConfig->SolverIterations) + "\n";
+				"\nSolverIterations: " + std::to_string(m_simulationConfig->SolverIterations) + "\n";
 
 			if (bExportCSV)
 			{
@@ -165,7 +162,11 @@ bool SimTest::PressureSolverTest()
 			{
 				m_simStepStatsPrevious = m_simStepStatsCurrent;
 
-				if (!sim_ops::ExecuteSimStep(m_fields, m_domainConfig, m_simConfig, &m_debugFields, &m_simStepStatsCurrent))
+				sim_ops::ApplySource(m_fields.VelocityField.UField(), 0.0f, 1.0f, false);
+				m_fields.VelocityField.SetBoundaryNormalComponentZero();
+				m_fields.VelocityField.UpdateGhostCellsNeumann();
+
+				if (!sim_ops::ExecuteSimStep(m_fields, m_domainConfig, m_simulationConfig, m_simulationTimeStep, &m_debugFields, &m_simStepStatsCurrent))
 				{
 					if (bExportCSV)
 					{

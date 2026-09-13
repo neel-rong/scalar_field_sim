@@ -274,6 +274,8 @@ public:
 
 private:
 
+	float m_marginFraction = 0.05f;	// Margin fraction for rendering
+
 	// Field Pointer
     Field2D<float>* m_scalarField = nullptr;
 	MACGridVelocityField2D* m_macVelocityField = nullptr;
@@ -295,6 +297,7 @@ private:
 	// OpenGL Uniform Locations
 	GLint m_fieldTexUniLocation = 0;
 	GLint m_pixelMinMaxUniLocation = 0;
+	GLint m_marginFractionUniLocation = 0;
 
 	// Renderer and Shaders
 	DynamicLineRenderer m_lineRenderer;

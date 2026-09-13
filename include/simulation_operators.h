@@ -127,10 +127,19 @@ namespace sim_ops
 		}
 	}
 
+	// ============================================================================================================================================
+	// CFL Time Step ==============================================================================================================================
+
+	float ComputeCFLTimeStep(const MACGridVelocityField2D& InVelocityField, const Float2 InCellSize, float InCFLNumber, float InMaxTimeStep);
+
+	float ComputeSubStepTime(float InTargetTimeStep, int SubStepCount);
+
+	int ComputeSubStepCount(float InTargetTimeStep, float CFLTimeStep);
+
 
 	// ============================================================================================================================================
-	// ============================================================================================================================================
+	// Execute Simulation Step ====================================================================================================================
 
 
-	bool ExecuteSimStep(Fields& InFields, DomainConfig* InDomainConfig, SimulationConfig* InSimulationConfig, DebugFields* InDebugFields = nullptr, SimStepStats* InSimStepStats = nullptr);
+	bool ExecuteSimStep(Fields& InFields, DomainConfig* InDomainConfig, SimulationConfig* InSimulationConfig, float InTimeStep, DebugFields* InDebugFields = nullptr, SimStepStats* InSimStepStats = nullptr);
 }

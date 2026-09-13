@@ -11,26 +11,20 @@
 int main()
 {
 	// Initialize GLFW Window
-	Window Window(1280, 720, "Scalar Field Simulation");
+	Window m_window(1280, 720, "Scalar Field Simulation");
 
 	// Profiler
-	FrameProfiler frame_profiler;
+	FrameProfiler m_frameProfiler;
 
-	// Initialize Simulation Configs
-	DomainConfig m_DomainConfig(Int2(128, 128), Float2(128, 128));
+	// Initialize Domain Config
+	DomainConfig m_domainConfig;
 
-	// Initialize Dye Properties
-	DyeProperties dye_properties(0.01f, 0.1f, 0.1f, 2.5f);
+	// Initialize Simulation Config
+	SimulationConfig m_simulationConfig;
+	m_simulationConfig.Reset();
+	m_simulationConfig.EmitterProperty.Reset(m_domainConfig);
 
-	// Initialize Emitter Properties
-	EmitterProperties<Field2D<float>> densityEmitterProperties(Float2(m_DomainConfig.DomainSize.x / 2, m_DomainConfig.DomainSize.y / 6), 6.0f, 1.0f, 0.1f, .03f);
-	EmitterProperties<Field2D<float>> velocityUEmitterProperties(Float2(m_DomainConfig.DomainSize.x / 2, m_DomainConfig.DomainSize.y / 6), 6.0f, 0.0f, 1.0f, .03f);
-	EmitterProperties<Field2D<float>> velocityVEmitterProperties(Float2(m_DomainConfig.DomainSize.x / 2, m_DomainConfig.DomainSize.y / 6), 6.0f, 1.5f, 0.0f, .03f);
-
-	// Initialize Simulation Configs
-	SimulationConfig simulation_configs(densityEmitterProperties, velocityUEmitterProperties, velocityVEmitterProperties, dye_properties);
-
-	// Initialize Render Configs
+	// Initialize Render Config
 	RenderConfig m_renderConfig;
 
 	//Mouse State
@@ -40,32 +34,31 @@ int main()
 	Playback playback = Playback::Stop;
 
 	// Initialize Simulation
-	Simulation simulation(&m_DomainConfig, &simulation_configs, &m_renderConfig, &frame_profiler, &mouse_state, &playback);
-	simulation.Init();
-	simulation.Reset();
+	Simulation m_simulation(&m_domainConfig, &m_simulationConfig, &m_renderConfig, &m_frameProfiler, &mouse_state, &playback);
+	m_simulation.Init();
 
 	// Initialize Renderer
-	Renderer Renderer(&m_renderConfig, &simulation_configs, simulation.m_scalarRenderField, simulation.m_velocityRenderField);
-	Renderer.Init();
+	Renderer m_renderer(&m_renderConfig, &m_simulationConfig, m_simulation.m_renderFieldScalar, m_simulation.m_renderFieldVelocity);
+	m_renderer.Init();
 
 	// Initialize GUI
-	GUI gui(&m_DomainConfig, &simulation_configs, &m_renderConfig, &playback, &frame_profiler, Renderer.GetTexID(), Window.GetNativeWindow());
+	GUI gui(&m_domainConfig, &m_simulationConfig, &m_renderConfig, &playback, &m_frameProfiler, m_renderer.GetTexID(), m_window.GetNativeWindow());
 	gui.Initialize();
 
 
 
-	while (!Window.ShouldClose())
+	while (!m_window.ShouldClose())
 	{
-		Window.Update(frame_profiler);
+		m_window.Update(m_frameProfiler);
 
-		Renderer.UpdateFields(simulation.m_scalarRenderField, simulation.m_velocityRenderField);
+		m_renderer.UpdateFields(m_simulation.m_renderFieldScalar, m_simulation.m_renderFieldVelocity);
 
 		// Draw Gui
 		gui.BeginFrame();
 
 		gui.Draw();
 
-		Renderer.BeginFrame();
+		m_renderer.BeginFrame();
 
 		switch (playback)
 		{
@@ -79,10 +72,10 @@ int main()
 				gui.UpdateMouseState();
 				gui.GetMouseState(mouse_state);
 
-				simulation.Update();
+				m_simulation.Update();
 
-				simulation.RunSimulation();
-				Renderer.Update(simulation.m_pixelValueMin, simulation.m_pixelValueMax, simulation.m_velocityMin, simulation.m_velocityMax);
+				m_simulation.RunSimulation();
+				m_renderer.Update(m_simulation.m_pixelValueMin, m_simulation.m_pixelValueMax, m_simulation.m_velocityMin, m_simulation.m_velocityMax);
 
 				break;
 			}
@@ -90,27 +83,26 @@ int main()
 			case Playback::Reset :
 			{
 				playback = Playback::Stop;
-				simulation.Init();
-				Renderer.Reset();
+				m_simulation.Init();
+				m_renderer.Reset();
+				m_simulationConfig.EmitterProperty.Reset(m_domainConfig);
 				break;
 			}
 
 			case Playback::Stop:
 			{
-				simulation.Reset();
+				m_simulation.Reset();
 				break;
 			}
 
 		}
 
-
-
-		Renderer.DrawFrame();
+		m_renderer.DrawFrame();
 
 		gui.EndFrame();
 
-		Window.SwapBuffers();
-		Window.PollEvents();
+		m_window.SwapBuffers();
+		m_window.PollEvents();
 
 	}
 

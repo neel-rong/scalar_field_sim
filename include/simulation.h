@@ -39,9 +39,10 @@ public:
 	int RunSimulation();
 
 
+
 	// Field Pointers
-	Field2D<float>* m_scalarRenderField = &m_fields.PressureField;
-	MACGridVelocityField2D* m_velocityRenderField = &m_fields.VelocityField;
+	Field2D<float>* m_renderFieldScalar = &m_fields.DensityField;
+	MACGridVelocityField2D* m_renderFieldVelocity = &m_fields.VelocityField;
 
 	// Render Properties
 	float m_pixelValueMin = std::numeric_limits<float>::max();
@@ -61,13 +62,19 @@ private:
 	DomainConfig* m_domainConfig = nullptr;
 
 	// Emitters
-	CircularEmitter<Field2D<float>> m_dyeEmitter;
-	CircularEmitter<Field2D<float>> m_velocityUEmitter;
-	CircularEmitter<Field2D<float>> m_velocityVEmitter;
+	CircularEmitter<Field2D<float>> m_Emitter;
 
 	// Fields
 	Fields m_fields;
 
-	void UpdatePixelMinMaxValue(const Field2D<float>* Field);
-	void UpdateVelocityMinMaxValue(const MACGridVelocityField2D* Field);
+	// Stats
+	FieldStats<float> DensityStats;
+	FieldStats<float> DivergenceStats;
+	FieldStats<float> PressureStats;
+
+	// Time Step Properties
+	float m_simulationTimeStep = 0.0f;
+
+	// Helper Functions
+	void UpdatePixelMinMax();
 };

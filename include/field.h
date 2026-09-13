@@ -10,9 +10,6 @@
 #include "interpolation_operators.h"
 
 
-
-
-
 template<typename T>
 class Field2D
 {

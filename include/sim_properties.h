@@ -97,12 +97,21 @@ struct EmitterProperties
 		BlendTime(InBlendTime)
 	{ }
 
+	void Reset(DomainConfig& InDomainConfig)
+	{
+		Position = Float2(InDomainConfig.DomainSize.x / 2.0f, InDomainConfig.DomainSize.y / 5.0f);
+		Radius = 6.0f;
+		InjectionValueAverage = { 2.5f, 0.0f, 2.0f };
+		InjectionValueVariance = { 0.5f, 1.5f, 0.5f };
+		BlendTime = 0.01f;
+	}
+
 	// Emitter Properties
 	Float2 Position;
 	float Radius;
 
-	typename T::ValueType InjectionValueAverage;
-	typename T::ValueType InjectionValueVariance;
+	std::array<typename T::ValueType, 3> InjectionValueAverage;
+	std::array<typename T::ValueType, 3> InjectionValueVariance;
 
 	float BlendTime;
 };
@@ -124,9 +133,7 @@ struct SimulationConfig
 		EmitterProperties<Field2D<float>>& InVelocityUEmitterProperties,
 		EmitterProperties<Field2D<float>>& InVelocityVEmitterProperties,
 		DyeProperties& InDyeProperties) :
-	DensityEmitterProperties(InDensityEmitterProperties),
-	VelocityUEmitterProperties(InVelocityUEmitterProperties),
-	VelocityVEmitterProperties(InVelocityVEmitterProperties),
+	EmitterProperty(InDensityEmitterProperties),
 	Dye(InDyeProperties) { }
 
 	// Enums
@@ -159,15 +166,11 @@ struct SimulationConfig
 	SimulationModeEnum SimulationMode = SimulationModeEnum::Simulation;
 
 	// Simulation Properties
-	float TimeStep = 0.025f;			//Default time step for simulation
-	float DiffusionScale = 0.0f;
-	float VorticityScale= 0.0f;
-	float AdvectionScale = 1.0f;
+	float TargetTimeStep = 0.025f;			//Default target time step for simulation
+	float CFLNumber = 0.5f;
 
 	// Emitter Properties
-	EmitterProperties<Field2D<float>> DensityEmitterProperties;
-	EmitterProperties<Field2D<float>> VelocityUEmitterProperties;
-	EmitterProperties<Field2D<float>> VelocityVEmitterProperties;
+	EmitterProperties<Field2D<float>> EmitterProperty;
 
 	// Dye properties
 	DyeProperties Dye;
@@ -178,12 +181,30 @@ struct SimulationConfig
 	bool bResetPressureField = false;
 	int SolverIterations = 200;													// Default Pressure Solver Iterations
 	float OverRelaxation = 1.97f;												// Keep over relaxation value between 1 - 2
+	bool bUseCFLTimeStep = true;
 
 	float VelocityMouseInjectionScale = 0.25f;
 	float MouseInjectionRadius = 6.0f;
 
 	// Test Properties
 	TestModeEnum TestMode = TestModeEnum::DivergenceTest;
+
+	// Reset the simulation to its initial state
+	void Reset()
+	{
+		SimulationMode = SimulationModeEnum::Simulation;
+		TargetTimeStep = 0.025f;
+		EmitterProperty = EmitterProperties<Field2D<float>>();
+		Dye = DyeProperties();
+		PressureSolver = PressureSolverEnum::RedBlackGaussSeidel;
+		bResetPressureField = false;
+		SolverIterations = 200;
+		OverRelaxation = 1.97f;
+		bool bUseCFLTimeStep = true;
+		TestMode = TestModeEnum::DivergenceTest;
+	}
+
+	// Functions to get string representations of the enums for UI display
 
 	static void GetSimulationModeString(const char** OutStrings, const size_t InSize)
 	{
@@ -308,7 +329,7 @@ public:
 	}
 
 	// Injects a random value within AverageCellValue and +/- CellValueVariance in the field at InjectionPosition within Radius
-	void Inject(T& Field, Float2 InCellSize, float dt)
+	void Inject(Fields& InFields, Float2 InCellSize, float dt)
 	{
 		Update(dt);
 
@@ -323,18 +344,25 @@ public:
 			Alpha = 1.0f; // If BlendTime is zero, set Alpha to 1 to immediately apply the target value
 		}
 
+		Field2D<typename T::ValueType>* TargetFields[3] = { &InFields.DensityField, &InFields.VelocityField.UField(), &InFields.VelocityField.VField()};
+
 		// Blend the current value with the target value based on the elapsed time and blend time
-		typename T::ValueType BlendedValue = Lerp(PreviousValue, TargetValue, Alpha);
+		for (int i = 0; i < 3; ++i)
+		{
+			typename T::ValueType BlendedValue = Lerp(PreviousValue[i], TargetValue[i], Alpha);
 
-		Float2 pos = Float2(static_cast<float>(Properties->Position.x) / InCellSize.x, static_cast<float>(Properties->Position.y) / InCellSize.y);
+			Float2 pos = Float2(static_cast<float>(Properties->Position.x) / InCellSize.x, static_cast<float>(Properties->Position.y) / InCellSize.y);
 
-		grid_algorithms::ForEachCellInRadius(InCellSize, Properties->Radius, pos, [&](int x, int y)
-			{
-				if (x >= 0 && x < Field.GetWidth() && y >= 0 && y < Field.GetHeight())
+			grid_algorithms::ForEachCellInRadius(InCellSize, Properties->Radius, pos, [&](int x, int y)
 				{
-					Field.Set(x, y, Field.Get(x, y) + BlendedValue);
-				}
-			});
+					if (x >= 0 && x < TargetFields[i]->GetWidth() && y >= 0 && y < TargetFields[i]->GetHeight())
+					{
+						float value = TargetFields[i]->Get(x, y);
+
+						TargetFields[i]->Set(x, y, value + BlendedValue);
+					}
+				});
+		}
 	}
 
 	// Updates the elapsed time and generates a new target value if the blend time has been exceeded
@@ -363,15 +391,13 @@ public:
 	}
 
 
-
 private:
 
 	EmitterProperties<T>* Properties;
 
-	float ElapsedTime;
-	typename T::ValueType PreviousValue = typename T::ValueType{};
-	typename T::ValueType TargetValue = typename T::ValueType{};
-
+	float ElapsedTime = 0.0f;
+	std::array<typename T::ValueType, 3> PreviousValue;
+	std::array<typename T::ValueType, 3> TargetValue;
 
 	std::mt19937 rng{ std::random_device{}() };
 
@@ -392,6 +418,16 @@ private:
 	{
 		std::uniform_real_distribution<float> Rand{ min, max };
 		return Rand(rng);
+	}
+
+	std::array<typename T::ValueType, 3> GetRandomValue(std::array<typename T::ValueType, 3> Average, std::array<typename T::ValueType, 3> Variance)
+	{
+		std::array<typename T::ValueType, 3> RandomValues;
+		for (size_t i = 0; i < 3; ++i)
+		{
+			RandomValues[i] = GetRandomFloat(Average[i] - Variance[i], Average[i] + Variance[i]);
+		}
+		return RandomValues;
 	}
 
 	float Lerp(float InPreviousValue, float TargetValue, float InAlpha)

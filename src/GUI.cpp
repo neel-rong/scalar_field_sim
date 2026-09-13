@@ -195,24 +195,37 @@ void GUI::DrawEditorPanel()
 	if (ImGui::CollapsingHeader("Simulation", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		ImGui::InputFloat(
-			"Time Step",
-			&m_simulationConfig->TimeStep
+			"Target Time Step",
+			&m_simulationConfig->TargetTimeStep
 		);
 
 		ShowToolTip(
-			"Time Step",
+			"Target Time Step",
 			"Time step for the simulation. Smaller values will result in more accurate simulations, but will also be slower."
 		);
 
-		ImGui::InputFloat(
-			"Advection Scale",
-			&m_simulationConfig->AdvectionScale
+		ImGui::Checkbox(
+			"Use CFL Time Step",
+			&m_simulationConfig->bUseCFLTimeStep
 		);
 
 		ShowToolTip(
-			"Advection Scale",
-			"Scale factor for the advection term in the simulation. Higher values will result in more pronounced advection effects."
+			"Use CFL Time Step",
+			"Limits the simulation time step based on the CFL condition."
 		);
+
+		if (m_simulationConfig->bUseCFLTimeStep)
+		{
+			ImGui::InputFloat(
+				"CFL Number",
+				&m_simulationConfig->CFLNumber
+			);
+
+			ShowToolTip(
+				"CFL Number",
+				"Controls the fraction of a grid cell a characteristic can travel during a simulation step."
+			);
+		}
 
 		ImGui::InputFloat(
 			"Velocity Mouse Injection Scale",
@@ -325,6 +338,8 @@ void GUI::DrawEditorPanel()
 			"Over relaxation factor for the Gauss-Seidel and Red-Black Gauss-Seidel solvers. Higher values will result in faster convergence, but may also result in instability."
 		);
 
+		// Emitter Settings
+		ImGui::SeparatorText("Domain Settings");
 
 		ImGui::InputInt2(
 			"Grid Resolution",
@@ -351,28 +366,14 @@ void GUI::DrawEditorPanel()
 		);
 	}
 
-
-	// Emitter Settings
 	ImGui::SeparatorText("Emitter Settings");
 
 	if (ImGui::CollapsingHeader("Emitter", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		// Density Emitter Settings
-		DrawEmitterProperties("Density Emitter", m_simulationConfig->DensityEmitterProperties,
-			"Density Emitter",
+		DrawEmitterProperties("Emitter", m_simulationConfig->EmitterProperty,
+			"Emitter Settings",
 			"Settings for the density emitter. The density emitter injects density into the simulation at a specified position and radius."
-			);
-
-
-		// Velocity Emitter Settings
-		DrawEmitterProperties("Velocity U Emitter", m_simulationConfig->VelocityUEmitterProperties,
-			"Velocity U Emitter",
-			"Settings for the velocity U emitter. The velocity U emitter injects velocity into the simulation at a specified position and radius."
-			);
-
-		DrawEmitterProperties("Velocity V Emitter", m_simulationConfig->VelocityVEmitterProperties,
-			"Velocity V Emitter",
-			"Settings for the velocity V emitter. The velocity V emitter injects velocity into the simulation at a specified position and radius."
 			);
 	}
 

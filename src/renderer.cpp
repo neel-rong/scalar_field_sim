@@ -175,9 +175,11 @@ bool Renderer::Init()
 
 	m_fieldTexUniLocation = glGetUniformLocation(m_shader.GetProgramID(), "u_FieldTexture");
 	m_pixelMinMaxUniLocation = glGetUniformLocation(m_shader.GetProgramID(), "u_PixelMinMax");
+	m_marginFractionUniLocation = glGetUniformLocation(m_shader.GetProgramID(), "u_MarginFraction");
 
 	glUniform1i(m_fieldTexUniLocation, 0);
 	glUniform2f(m_pixelMinMaxUniLocation, m_pixelMin, m_pixelMax);
+	glUniform1f(m_marginFractionUniLocation, m_marginFraction);
 
 	m_shader.Unbind();
 
@@ -312,7 +314,7 @@ void Renderer::ComputeLayout()
 	m_renderLayout.framebufferWidth = m_renderConfig->RenderResolution.x;
 	m_renderLayout.framebufferHeight = m_renderConfig->RenderResolution.y;
 
-	m_renderLayout.renderRegion = Float2(m_renderLayout.framebufferWidth, m_renderLayout.framebufferHeight) * 0.95f;
+	m_renderLayout.renderRegion = Float2(m_renderLayout.framebufferWidth, m_renderLayout.framebufferHeight) * (1 - m_marginFraction);
 
 	m_renderLayout.cellSize = std::min(m_renderLayout.renderRegion.x / m_renderLayout.fieldWidth,
 		m_renderLayout.renderRegion.y / m_renderLayout.fieldHeight);

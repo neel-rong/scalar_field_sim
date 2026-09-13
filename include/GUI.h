@@ -63,8 +63,6 @@ public:
 	template<ArithmeticField T>
 	void DrawEmitterProperties(const char* Title, EmitterProperties<T>& EmitterProperties, const std::string& InLabel, const std::string& InDescription)
 	{
-		ImGui::SeparatorText(Title);
-
 		ImGui::PushID(Title);
 
 		ShowToolTip(
@@ -86,15 +84,38 @@ public:
 			m_domainConfig->DomainSize.x
 		);
 
-		ShowToolTip("Injection Position", "The position of the injection area for the emitter. This defines the center of the area where the emitter will inject values into the simulation.");
+		ShowToolTip("Injection Position", "The position of the injection area for the emitter. "
+			"\nThis defines the center of the area where the emitter will inject values into the simulation.");
 
-		DrawValue("Injection Value Average", &EmitterProperties.InjectionValueAverage);
+		DrawValue("Density Injection Value Average", &EmitterProperties.InjectionValueAverage[0]);
 
-		ShowToolTip("Injection Value Average", "The average value that the emitter will inject into the simulation. This defines the mean of the values that will be injected.");
+		ShowToolTip("Density Injection Value Average", "The average value that the emitter will inject into the simulation. "
+			"\nThis defines the mean of the values that will be injected.");
 
-		DrawValue("Injection Value Variance", &EmitterProperties.InjectionValueVariance);
+		DrawValue("Density Injection Value Variance", &EmitterProperties.InjectionValueVariance[0]);
 
-		ShowToolTip("Injection Value Variance", "The variance of the values that the emitter will inject into the simulation. This defines the spread of the values that will be injected.");
+		ShowToolTip("Density Injection Value Variance", "The variance of the values that the emitter will inject into the simulation. "
+			"\nThis defines the spread of the values that will be injected.");
+
+		DrawValue("Velocity U Injection Value Average", &EmitterProperties.InjectionValueAverage[1]);
+
+		ShowToolTip("Velocity U Injection Value Average", "The average value that the emitter will inject into the simulation. "
+			"\nThis defines the mean of the values that will be injected.");
+
+		DrawValue("Velocity U Injection Value Variance", &EmitterProperties.InjectionValueVariance[1]);
+
+		ShowToolTip("Velocity U Injection Value Variance", "The variance of the values that the emitter will inject into the simulation. "
+			"\nThis defines the spread of the values that will be injected.");
+
+		DrawValue("Velocity V Injection Value Average", &EmitterProperties.InjectionValueAverage[2]);
+
+		ShowToolTip("Velocity V Injection Value Average", "The average value that the emitter will inject into the simulation. "
+			"\nThis defines the mean of the values that will be injected.");
+
+		DrawValue("Velocity V Injection Value Variance", &EmitterProperties.InjectionValueVariance[2]);
+
+		ShowToolTip("Velocity V Injection Value Variance", "The variance of the values that the emitter will inject into the simulation. "
+			"\nThis defines the spread of the values that will be injected.");
 
 		ImGui::PopID();
 	}

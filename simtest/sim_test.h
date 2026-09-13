@@ -14,7 +14,7 @@ public:
 	// Constructor
 	SimTest(DomainConfig* InDomainConfig, SimulationConfig* InSimConfig, SimulationTime::SimTime* InSimTime) :
 		m_domainConfig(InDomainConfig),
-		m_simConfig(InSimConfig),
+		m_simulationConfig(InSimConfig),
 		m_simTime(InSimTime) {}
 
 	// Core Functions
@@ -37,11 +37,12 @@ private:
 
 
 	// Configs
-	SimulationConfig* m_simConfig = nullptr;
+	SimulationConfig* m_simulationConfig = nullptr;
 	DomainConfig* m_domainConfig = nullptr;
 	SimulationTime::SimTime* m_simTime = nullptr;
 	SimStepStats m_simStepStatsCurrent;
 	SimStepStats m_simStepStatsPrevious;
+	FrameProfiler m_frameProfiler;
 
 	// Fields
 	Fields m_fields;
@@ -71,4 +72,7 @@ private:
 
 	float m_divergenceThreshold = 0.003f;
 	float m_residualThreshold = 0.003f;
+
+	// TimeStep
+	float m_simulationTimeStep = 0.01;
 };

@@ -86,14 +86,14 @@ public:
 	// Profiler Function
 	void Update(FrameProfiler& InFrameProfiler)
 	{
+		// Set Previous Time = Current Time
+		InFrameProfiler.PreviousTime = InFrameProfiler.CurrentTime;
+
 		// Set Current Time to glfw Time
 		InFrameProfiler.CurrentTime = glfwGetTime();
 
 		// Calculate Delta Time (Current Time - Previous Time)
 		InFrameProfiler.DeltaTime = InFrameProfiler.CurrentTime - InFrameProfiler.PreviousTime;
-
-		// Set Previous Time = Current Time
-		InFrameProfiler.PreviousTime = InFrameProfiler.CurrentTime;
 
 		// Increment FrameCount
 		InFrameProfiler.FrameCount++;

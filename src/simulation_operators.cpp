@@ -1,4 +1,8 @@
 #include "simulation_operators.h"
+#include "simulation_operators.h"
+#include <limits>
+#include "simulation_operators.h"
+
 
 
 
@@ -164,11 +168,17 @@ void sim_ops::Divergence(const MACGridVelocityField2D& InField, Field2D<float>& 
 
 void sim_ops::Jacobi(Field2D<float>& InPressureField, Field2D<float>& TemporaryField, const Field2D<float>& DivergenceField, const Float2 InCellSize, int InIterations)
 {
+	const int heightMin = Field2D<float>::GhostCellPadding;
+	const int heightMax = InPressureField.GetHeight() - Field2D<float>::GhostCellPadding;
+
+	const int widthMin = Field2D<float>::GhostCellPadding;
+	const int widthMax = InPressureField.GetWidth() - Field2D<float>::GhostCellPadding;
+
 	for (int j = 0; j < InIterations; ++j)
 	{
-		for (int y = Field2D<float>::GhostCellPadding; y < InPressureField.GetHeight() - Field2D<float>::GhostCellPadding; y++)
+		for (int y = heightMin; y < heightMax; y++)
 		{
-			for (int x = Field2D<float>::GhostCellPadding; x < InPressureField.GetWidth() - Field2D<float>::GhostCellPadding; ++x)
+			for (int x = widthMin; x < widthMax; ++x)
 			{
 				float value = sim_solvers::PressureSolver(InPressureField, DivergenceField, InCellSize, x, y);
 
@@ -305,13 +315,49 @@ void sim_ops::ComputeStats(const MACGridVelocityField2D& InField, MACGridVelocit
 
 
 // ============================================================================================================================================
-// ============================================================================================================================================
+// CFL Time Step ==============================================================================================================================
 
+float sim_ops::ComputeCFLTimeStep(const MACGridVelocityField2D& InVelocityField, const Float2 InCellSize, float InCFLNumber, float InMaxTimeStep)
+{
+	MACGridVelocityStats VelocityStats;
+	ComputeStats(InVelocityField, VelocityStats);
+
+	const float MaxAbsU = std::max(std::abs(VelocityStats.GetStatsUField().GetStatsMin()),
+		std::abs(VelocityStats.GetStatsUField().GetStatsMax()));
+	const float MaxAbsV = std::max(std::abs(VelocityStats.GetStatsVField().GetStatsMin()),
+		std::abs(VelocityStats.GetStatsVField().GetStatsMax()));
+
+	const float dtU = MaxAbsU > 0.0f
+		? InCellSize.x / MaxAbsU
+		: std::numeric_limits<float>::max();
+
+	const float dtV = MaxAbsV > 0.0f
+		? InCellSize.y / MaxAbsV
+		: std::numeric_limits<float>::max();
+
+	const float CFLTimeStep = InCFLNumber * std::min(dtU, dtV);
+
+	return std::min(CFLTimeStep, InMaxTimeStep);
+}
+
+float sim_ops::ComputeSubStepTime(float InTargetTimeStep, int InSubStepCount)
+{
+	return InTargetTimeStep / InSubStepCount;
+}
+
+int sim_ops::ComputeSubStepCount(float InTargetTimeStep, float InCFLTimeStep)
+{
+	return std::ceil(InTargetTimeStep / InCFLTimeStep);
+}
+
+
+// ============================================================================================================================================
+// Execute Simulation Step ====================================================================================================================
 // Executes a simulation step for the given state of the fields
-bool sim_ops::ExecuteSimStep(Fields& InField, DomainConfig* InDomainConfig, SimulationConfig* InSimulationConfig, DebugFields* InDebugFields, SimStepStats* InSimStepStats)
+bool sim_ops::ExecuteSimStep(Fields& InField, DomainConfig* InDomainConfig, SimulationConfig* InSimulationConfig, float InTimeStep, DebugFields* InDebugFields, SimStepStats* InSimStepStats)
 {
 	// Advect Velocity Field
-	Advection(InField.VelocityField, InField.VelocityFieldScratch, InDomainConfig->GetCellSize(), InSimulationConfig->TimeStep);
+	Advection(InField.VelocityField, InField.VelocityFieldScratch, InDomainConfig->GetCellSize(), InTimeStep);
 	std::swap(InField.VelocityField, InField.VelocityFieldScratch);
 	InField.VelocityField.SetBoundaryNormalComponentZero();
 	InField.VelocityField.UpdateGhostCellsNeumann();
@@ -401,7 +447,7 @@ bool sim_ops::ExecuteSimStep(Fields& InField, DomainConfig* InDomainConfig, Simu
 		}
 	}
 
-	Advection(InField.DensityField, InField.ScalarFieldScratch, InField.VelocityField, InDomainConfig->GetCellSize(), InSimulationConfig->TimeStep);
+	Advection(InField.DensityField, InField.ScalarFieldScratch, InField.VelocityField, InDomainConfig->GetCellSize(), InTimeStep);
 	std::swap(InField.DensityField, InField.ScalarFieldScratch);
 
 	return true;
